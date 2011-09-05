@@ -14,6 +14,7 @@ my @dirs = ("$root/pancam1/motion",
             "$root/pancam2/motion",
             "$root/pancam2/timer");
 
+
 foreach my $dir (@dirs) {
   my $stoptime;
   $stoptime = time();
