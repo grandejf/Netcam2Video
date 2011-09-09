@@ -4,16 +4,45 @@ use strict;
 use Time::Local;
 use POSIX;
 use File::Copy;
+use Fcntl qw(:flock);
 
 # crontab:
-# 5 0 * * * cd /DataVolume/shares/Netcam; perl -w compress_to_mp4.pl >>compress_to_mp4.log 2>&1
+# run every 5 minutes from midnight until 1am in case in case cron wasn't running
+# */5 0 * * * cd /DataVolume/shares/Netcam; perl -w compress_to_mp4.pl --beforeTime 0000 >>compress_to_mp4.log 2>&1
+
+my $beforeTime;
+my @newargs;
+while (@ARGV) {
+  my $arg = shift @ARGV;
+  if ($arg =~ /^--beforeTime/oi) {
+    $beforeTime = shift @ARGV;
+    next;
+  }
+  push @newargs, $arg;
+}
+@ARGV = @newargs;
+
+
+my $pidfile = "compress_to_mp4.pl.pid";
+if (open(PID,">>$pidfile")) {
+  flock PID, LOCK_EX|LOCK_NB or die "Already running\n";
+  select((select(PID), $| = 1)[0]);
+  truncate PID, 0;
+  print PID "$$\n";
+}
+
+if ($beforeTime) {
+  my ($h, $m) = ($beforeTime =~ /^(\d\d):?(\d\d)$/);
+  die "Bad time: $beforeTime\n" unless defined($h) && defined($m);
+  $beforeTime = time();
+  $beforeTime = timelocal(0, $m, $h, (localtime($beforeTime))[3], (localtime($beforeTime))[4], (localtime($beforeTime))[5]);
+}
 
 my $root = '/DataVolume/shares/Netcam';
 my @dirs = ("$root/pancam1/motion",
             "$root/pancam1/timer",
             "$root/pancam2/motion",
             "$root/pancam2/timer");
-
 
 foreach my $dir (@dirs) {
   my $stoptime;
@@ -25,6 +54,7 @@ foreach my $dir (@dirs) {
     $threshold = 60*10;
     $stoptime = 0;
   }
+  $stoptime = $beforeTime if $beforeTime;
   if (opendir (DIR, $dir)) {
     my @filenames;
     while (my $filename = readdir(DIR)) {
