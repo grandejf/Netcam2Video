@@ -42,7 +42,10 @@ my $root = '/DataVolume/shares/Netcam';
 my @dirs = ("$root/pancam1/motion",
             "$root/pancam1/timer",
             "$root/pancam2/motion",
-            "$root/pancam2/timer");
+            "$root/pancam2/timer",
+            "$root/pancam3/motion",
+            "$root/pancam3/timer",
+    );
 
 foreach my $dir (@dirs) {
   my $stoptime;
