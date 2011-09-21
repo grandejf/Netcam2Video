@@ -96,6 +96,14 @@ foreach my $dir (@dirs) {
       if (! -d $outdir) {
         mkdir($outdir);
       }
+      $outdir .= strftime("/%Y", localtime($ts));
+      if (! -d $outdir) {
+        mkdir($outdir);
+      }
+      $outdir .= strftime("/%Y%m", localtime($ts));
+      if (! -d $outdir) {
+        mkdir($outdir);
+      }
       $outdir .= strftime("/%Y%m%d", localtime($ts));
       if (! -d $outdir) {
         mkdir($outdir);
