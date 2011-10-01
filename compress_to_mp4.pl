@@ -8,7 +8,7 @@ use Fcntl qw(:flock);
 
 # crontab:
 # run every 5 minutes from midnight until 1am in case in case cron wasn't running
-# */5 0 * * * cd /DataVolume/shares/Netcam; perl -w compress_to_mp4.pl --beforeTime 0000 >>compress_to_mp4.log 2>&1
+# */5 0 * * * umask 002; cd /DataVolume/shares/Netcam; perl -w compress_to_mp4.pl --beforeTime 0000 >>compress_to_mp4.log 2>&1
 
 my $beforeTime;
 my @newargs;
