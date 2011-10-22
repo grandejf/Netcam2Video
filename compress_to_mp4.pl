@@ -11,11 +11,16 @@ use Fcntl qw(:flock);
 # */5 0 * * * umask 002; cd /DataVolume/shares/Netcam; perl -w compress_to_mp4.pl --beforeTime 0000 >>compress_to_mp4.log 2>&1
 
 my $beforeTime;
+my $root;
 my @newargs;
 while (@ARGV) {
   my $arg = shift @ARGV;
   if ($arg =~ /^--beforeTime/oi) {
     $beforeTime = shift @ARGV;
+    next;
+  }
+  if ($arg =~ /^--root/oi) {
+    $root = shift @ARGV;
     next;
   }
   push @newargs, $arg;
@@ -38,7 +43,7 @@ if ($beforeTime) {
   $beforeTime = timelocal(0, $m, $h, (localtime($beforeTime))[3], (localtime($beforeTime))[4], (localtime($beforeTime))[5]);
 }
 
-my $root = '/DataVolume/shares/Netcam';
+$root ||= '/DataVolume/shares/Netcam';
 my @dirs = ("$root/pancam1/motion",
             "$root/pancam1/timer",
             "$root/pancam2/motion",
@@ -108,8 +113,16 @@ foreach my $dir (@dirs) {
       if (! -d $outdir) {
         mkdir($outdir);
       }
-      my $ofilename = strftime("%Y%m%d-%H%M%S.mov", localtime($ts));
-      my $out = `ffmpeg -y -r 3 -vcodec copy -i $dir/tmp/tmp%08d.jpg $outdir/$ofilename 2>&1`;
+      my $ofilename;
+      my $out;
+      if (supports264()) {
+        $ofilename = strftime("%Y%m%d-%H%M%S.mp4", localtime($ts));
+        $out = `ffmpeg -y -r 3 -i $dir/tmp/tmp%08d.jpg -vcodec libx264 -b 200k -maxrate 500k -bufsize 1835k $outdir/$ofilename 2>&1`;
+      }
+      else {
+        $ofilename = strftime("%Y%m%d-%H%M%S.mov", localtime($ts));
+        $out = `ffmpeg -y -r 3 -vcodec copy -i $dir/tmp/tmp%08d.jpg $outdir/$ofilename 2>&1`;
+      }
       if ($out =~ /error/om) {
         print "$out\n";
         die;
@@ -122,4 +135,13 @@ foreach my $dir (@dirs) {
       }
     }
   }
+}
+
+
+sub supports264
+{
+  if (`ffmpeg -codecs 2> /dev/null |grep libx264`) {
+    return 1;
+  }
+  return 0;
 }
