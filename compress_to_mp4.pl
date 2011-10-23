@@ -12,7 +12,7 @@ use Fcntl qw(:flock);
 # */5 0 * * * umask 002; cd /DataVolume/shares/Netcam; perl -w compress_to_mp4.pl --beforeTime 0000 >>compress_to_mp4.log 2>&1
 #
 # on pogoplug
-# */10 0 * * * cd /home/pancam/Netcam; perl -w compress_to_mp4.pl -root . -beforeTime 0000 -upload 192.168.1.103
+# */10 0 * * * cd /home/pancam/Netcam; perl -w compress_to_mp4.pl --root . --beforeTime 0000 --upload 192.168.1.103
 
 my $beforeTime;
 my $root;
