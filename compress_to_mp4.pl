@@ -4,14 +4,19 @@ use strict;
 use Time::Local;
 use POSIX;
 use File::Copy;
+use Net::FTP;
 use Fcntl qw(:flock);
 
 # crontab:
 # run every 5 minutes from midnight until 1am in case in case cron wasn't running
 # */5 0 * * * umask 002; cd /DataVolume/shares/Netcam; perl -w compress_to_mp4.pl --beforeTime 0000 >>compress_to_mp4.log 2>&1
+#
+# on pogoplug
+# */10 0 * * * cd /home/pancam/Netcam; perl -w compress_to_mp4.pl -root . -beforeTime 0000 -upload 192.168.1.103
 
 my $beforeTime;
 my $root;
+my $upload;
 my @newargs;
 while (@ARGV) {
   my $arg = shift @ARGV;
@@ -22,6 +27,9 @@ while (@ARGV) {
   if ($arg =~ /^--root/oi) {
     $root = shift @ARGV;
     next;
+  }
+  if ($arg =~ /^--upload/oi) {
+    $upload = shift @ARGV;
   }
   push @newargs, $arg;
 }
@@ -51,6 +59,8 @@ my @dirs = ("$root/pancam1/motion",
             "$root/pancam3/motion",
             "$root/pancam3/timer",
     );
+
+my @videofiles;
 
 foreach my $dir (@dirs) {
   my $stoptime;
@@ -114,10 +124,10 @@ foreach my $dir (@dirs) {
         mkdir($outdir);
       }
       my $ofilename;
-      my $out;
-      if (supports264()) {
+      my $out = '';
+      if (supports_mpeg4()) {
         $ofilename = strftime("%Y%m%d-%H%M%S.mp4", localtime($ts));
-        $out = `ffmpeg -y -r 3 -i $dir/tmp/tmp%08d.jpg -vcodec libx264 -b 200k -maxrate 500k -bufsize 1835k $outdir/$ofilename 2>&1`;
+        $out = `ffmpeg -y -r 3 -i $dir/tmp/tmp%08d.jpg -vcodec mpeg4 -b 400k $outdir/$ofilename 2>&1`;
       }
       else {
         $ofilename = strftime("%Y%m%d-%H%M%S.mov", localtime($ts));
@@ -133,15 +143,79 @@ foreach my $dir (@dirs) {
       foreach my $filename (@{$batches{$ts}}) {
         unlink("$dir/$filename");
       }
+      push @videofiles, "$outdir/$ofilename";
     }
   }
 }
 
 
-sub supports264
+if ($upload && @videofiles) {
+  uploadVideos($upload, \@videofiles);
+}
+
+sub supports_mpeg4
 {
-  if (`ffmpeg -codecs 2> /dev/null |grep libx264`) {
+  if (`ffmpeg -codecs 2> /dev/null |grep mpeg4 |grep EV`) {
     return 1;
   }
   return 0;
+}
+
+sub uploadVideos
+{
+  my ($remoteserver,$videofiles) = @_;
+  my $user;
+  my $pass;
+  open(CONFIG,"config.ini");
+  while (<CONFIG>) {
+    chomp;
+    my $line = $_;
+    my ($key, $val) = ($line =~ /^\s*(\S+?)\s*=\s*(.*?)\s*$/o);
+    if ($key && $val) {
+      if ($key eq 'user') {
+        $user = $val;
+      }
+      if ($key eq 'password') {
+        $pass = $val;
+      }
+    }
+  }
+  close CONFIG;
+  foreach my $source (@{$videofiles}) {
+    my ($dest,$filename) = ($source =~ m!(.*)/(.+?)$!o);
+    $dest = cleanpath($dest);
+    my $ftp = Net::FTP->new($remoteserver, Debug=>0) or die "Couldn't connect to $remoteserver: $@\n";
+    $ftp->login($user,$pass) or die "Couldn't login ", $ftp->message;
+    $ftp->binary();
+    $ftp->cwd("Netcam") or die $ftp->message;
+    if (!$ftp->cwd($dest)) {
+      $ftp->mkdir($dest,1) or die "Couldn't create $dest", $ftp->message;
+      $ftp->cwd($dest) or die "Couldn't cd into $dest", $ftp->message;
+    }
+    if ($ftp->put($source,$filename)) {
+      unlink($source);
+    }
+    else {
+      die "Couldn't upload $source -> $filename", $ftp->message;
+    }
+    $ftp->quit();
+  }
+
+}
+
+sub cleanpath
+{
+  my ($in) = @_;
+  my @out;
+  foreach my $p (split /\//, $in) {
+    if ($p eq '..') {
+      pop @out;
+    }
+    elsif ($p eq '.') {
+    }
+    else {
+      push @out, $p;
+    }
+  }
+  return join "/", @out;
 }
