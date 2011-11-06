@@ -17,6 +17,7 @@ use Fcntl qw(:flock);
 my $beforeTime;
 my $root;
 my $upload;
+my $oldvideos = 0;
 my @newargs;
 while (@ARGV) {
   my $arg = shift @ARGV;
@@ -30,6 +31,9 @@ while (@ARGV) {
   }
   if ($arg =~ /^--upload/oi) {
     $upload = shift @ARGV;
+  }
+  if ($arg =~ /^--oldvideos/oi) {
+    $oldvideos = 1;
   }
   push @newargs, $arg;
 }
@@ -85,6 +89,9 @@ foreach my $dir (@dirs) {
     my $lastts = 0;
     foreach my $filename (@filenames) {
       my ($year,$mon,$mday,$hour,$min,$sec,$msec) = ($filename =~ /(\d{4})(\d{2})(\d{2})s(\d{2})(\d{2})(\d{2})(\d+)\.jpg/o);
+      if (!defined($msec)) {
+        ($year,$mon,$mday,$hour,$min,$sec,$msec) = ($filename =~ /[^0-9](\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})(\d+)\.jpg/o);
+      }
       my $ts = timelocal($sec, $min, $hour, $mday, $mon-1, $year);
       next if $stoptime && $ts>$stoptime;
       if ($ts - $lastts > $threshold) {
@@ -148,6 +155,15 @@ foreach my $dir (@dirs) {
   }
 }
 
+if ($oldvideos) {
+  foreach my $dir (@dirs) {
+    $dir .= '_video';
+    foreach my $filename (`find $dir -name "*.mp4"`) {
+      chomp($filename);
+      push @videofiles, $filename;
+    }
+  }
+}
 
 if ($upload && @videofiles) {
   uploadVideos($upload, \@videofiles);
