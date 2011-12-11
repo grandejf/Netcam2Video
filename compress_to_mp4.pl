@@ -62,6 +62,8 @@ my @dirs = ("$root/pancam1/motion",
             "$root/pancam2/timer",
             "$root/pancam3/motion",
             "$root/pancam3/timer",
+            "$root/pancam4/motion",
+            "$root/pancam4/timer",
     );
 
 my @videofiles;
