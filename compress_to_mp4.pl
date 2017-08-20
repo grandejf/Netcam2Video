@@ -136,11 +136,11 @@ foreach my $dir (@dirs) {
       my $out = '';
       if (supports_mpeg4()) {
         $ofilename = strftime("%Y%m%d-%H%M%S.mp4", localtime($ts));
-        $out = `ffmpeg -y -r 3 -i $dir/tmp/tmp%08d.jpg -vcodec mpeg4 -b 400k $outdir/$ofilename 2>&1`;
+        $out = `/usr/local/bin/ffmpeg -y -r 3 -i $dir/tmp/tmp%08d.jpg -vcodec mpeg4 -b 400k $outdir/$ofilename 2>&1`;
       }
       else {
         $ofilename = strftime("%Y%m%d-%H%M%S.mov", localtime($ts));
-        $out = `ffmpeg -y -r 3 -vcodec copy -i $dir/tmp/tmp%08d.jpg $outdir/$ofilename 2>&1`;
+        $out = `/usr/local/bin/ffmpeg -y -r 3 -vcodec copy -i $dir/tmp/tmp%08d.jpg $outdir/$ofilename 2>&1`;
       }
       if ($out =~ /error/om) {
         print "$out\n";
@@ -173,7 +173,7 @@ if ($upload && @videofiles) {
 
 sub supports_mpeg4
 {
-  if (`ffmpeg -codecs 2> /dev/null |grep mpeg4 |grep EV`) {
+  if (`/usr/local/bin/ffmpeg -codecs 2> /dev/null |grep mpeg4 |grep EV`) {
     return 1;
   }
   return 0;
