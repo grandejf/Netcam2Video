@@ -201,6 +201,7 @@ sub uploadVideos
   close CONFIG;
   foreach my $source (@{$videofiles}) {
     my ($dest,$filename) = ($source =~ m!(.*)/(.+?)$!o);
+    next unless -f $source;
     $dest = cleanpath($dest);
     my $ftp = Net::FTP->new($remoteserver, Debug=>0) or die "Couldn't connect to $remoteserver: $@\n";
     $ftp->login($user,$pass) or die "Couldn't login ", $ftp->message;
