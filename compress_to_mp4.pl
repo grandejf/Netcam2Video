@@ -111,6 +111,8 @@ foreach my $dir (@dirs) {
       foreach my $filename (@{$batches{$ts}}) {
         my $tfilename = sprintf("tmp%08d.jpg", $count);
         my $tpath = "$dir/tmp/$tfilename";
+        my $type = `file $dir/$filename`;
+        next unless $type =~ /JPEG/oi;
         push @tmpfiles, $tpath;
         copy("$dir/$filename",$tpath) or die "copy failed $!";
         $count++;
